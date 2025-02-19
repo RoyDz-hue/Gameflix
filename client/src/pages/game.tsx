@@ -47,14 +47,25 @@ export default function Game() {
   };
 
   const startGame = () => {
-    if (!user || Number(bet) > Number(user.balance)) {
+    const betAmount = Number(bet);
+    if (!user || betAmount > Number(user.balance)) {
       toast({
         title: "Insufficient balance",
-        description: "Please deposit more funds to play.",
+        description: "Your balance is too low for this bet amount.",
         variant: "destructive",
       });
       return;
     }
+
+    if (betAmount <= 0) {
+      toast({
+        title: "Invalid bet amount",
+        description: "Please enter a valid bet amount greater than 0.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsPlaying(true);
   };
 

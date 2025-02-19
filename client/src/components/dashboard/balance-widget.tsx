@@ -53,8 +53,16 @@ export default function BalanceWidget({ balance, transactions }: BalanceWidgetPr
 
   const withdrawMutation = useMutation({
     mutationFn: async (amount: number) => {
+      if (amount <= 0) {
+        throw new Error("Please enter a valid amount greater than 0");
+      }
+
+      if (amount > Number(balance)) {
+        throw new Error("Insufficient balance for withdrawal");
+      }
+
       const res = await apiRequest("POST", "/api/transactions/withdraw", { amount });
-      return res.json();
+      return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
@@ -64,6 +72,13 @@ export default function BalanceWidget({ balance, transactions }: BalanceWidgetPr
         description: `Withdrawn KES ${amount} from your balance`,
       });
       setAmount("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Withdrawal failed",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 

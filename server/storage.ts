@@ -52,7 +52,7 @@ export class MemStorage implements IStorage {
     const user: User = {
       ...insertUser,
       id,
-      balance: 0,
+      balance: "0",
       referralCode: nanoid(8),
       referredBy: null,
       createdAt: new Date(),
@@ -65,8 +65,17 @@ export class MemStorage implements IStorage {
     const user = await this.getUser(userId);
     if (!user) throw new Error("User not found");
 
-    const newBalance = Number(user.balance) + amount;
-    user.balance = newBalance;
+    // Convert existing balance to number
+    const currentBalance = Number(user.balance);
+    const newBalance = currentBalance + amount;
+
+    // Prevent negative balance
+    if (newBalance < 0) {
+      throw new Error("Insufficient balance");
+    }
+
+    // Update balance and convert back to string for storage
+    user.balance = newBalance.toString();
     this.users.set(userId, user);
     return user;
   }
