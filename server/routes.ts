@@ -85,7 +85,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/transactions/callback", async (req, res) => {
-    const { reference, status, success } = req.body;
+    const { reference, status, success, provider_reference } = req.body;
 
     // Find transaction by PayHero reference
     const transactions = await storage.getAllTransactions();
@@ -95,13 +95,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(404).json({ message: "Transaction not found" });
     }
 
+    // Update transaction status based on PayHero callback
     if (status === "SUCCESS" && success === true) {
-      // Update transaction status and user balance
+      // Update transaction status and provider reference
       await storage.updateTransactionStatus(transaction.id, "completed");
-      await storage.updateUserBalance(transaction.userId, Number(transaction.amount));
+
+      // Update user balance for completed transactions
+      const amount = Number(transaction.amount);
+      await storage.updateUserBalance(transaction.userId, amount);
+
     } else if (status === "FAILED" || success === false) {
       await storage.updateTransactionStatus(transaction.id, "failed");
     }
+    // For QUEUED status, keep transaction as pending
 
     res.sendStatus(200);
   });
@@ -117,8 +123,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const status = await payHero.checkTransactionStatus(req.params.reference);
+
+      // Find and update transaction if status has changed
+      const transactions = await storage.getAllTransactions();
+      const transaction = transactions.find(t => t.transactionId === req.params.reference);
+
+      if (transaction && transaction.status === "pending") {
+        if (status.status === "SUCCESS" && status.success === true) {
+          await storage.updateTransactionStatus(transaction.id, "completed");
+          const amount = Number(transaction.amount);
+          await storage.updateUserBalance(transaction.userId, amount);
+        } else if (status.status === "FAILED" || status.success === false) {
+          await storage.updateTransactionStatus(transaction.id, "failed");
+        }
+      }
+
       res.json(status);
-    } catch (error) {
+    } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
   });

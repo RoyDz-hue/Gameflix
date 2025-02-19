@@ -35,13 +35,42 @@ export default function BalanceWidget({ balance, transactions }: BalanceWidgetPr
       const res = await apiRequest("POST", "/api/transactions/deposit", data);
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      toast({
-        title: "STK Push sent",
-        description: "Please check your phone to complete payment",
-      });
+    onSuccess: async (data) => {
+      // Start polling for transaction status
+      const pollStatus = async () => {
+        try {
+          const res = await apiRequest("GET", `/api/transactions/status/${data.paymentRef}`);
+          const status = await res.json();
+
+          if (status.status === "SUCCESS" && status.success === true) {
+            queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+            toast({
+              title: "Deposit successful",
+              description: `Added KES ${amount} to your balance`,
+            });
+            return true;
+          } else if (status.status === "FAILED" || status.success === false) {
+            toast({
+              title: "Deposit failed",
+              description: "The payment was not completed",
+              variant: "destructive",
+            });
+            return true;
+          }
+          return false;
+        } catch (error) {
+          return false;
+        }
+      };
+
+      // Poll every 5 seconds for up to 2 minutes
+      for (let i = 0; i < 24; i++) {
+        const done = await pollStatus();
+        if (done) break;
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
+
       setAmount("");
       setPhone("");
     },
@@ -54,6 +83,7 @@ export default function BalanceWidget({ balance, transactions }: BalanceWidgetPr
     },
   });
 
+  // Similar update for withdrawMutation
   const withdrawMutation = useMutation({
     mutationFn: async (data: {amount: number; phone: string}) => {
       if (data.amount <= 0) {
@@ -67,13 +97,42 @@ export default function BalanceWidget({ balance, transactions }: BalanceWidgetPr
       const res = await apiRequest("POST", "/api/transactions/withdraw", data);
       return await res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      toast({
-        title: "Withdrawal successful",
-        description: `Withdrawn KES ${amount} from your balance`,
-      });
+    onSuccess: async (data) => {
+      // Start polling for transaction status
+      const pollStatus = async () => {
+        try {
+          const res = await apiRequest("GET", `/api/transactions/status/${data.paymentRef}`);
+          const status = await res.json();
+
+          if (status.status === "SUCCESS" && status.success === true) {
+            queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+            toast({
+              title: "Withdrawal successful",
+              description: `Withdrawn KES ${amount} from your balance`,
+            });
+            return true;
+          } else if (status.status === "FAILED" || status.success === false) {
+            toast({
+              title: "Withdrawal failed",
+              description: "The withdrawal was not completed",
+              variant: "destructive",
+            });
+            return true;
+          }
+          return false;
+        } catch (error) {
+          return false;
+        }
+      };
+
+      // Poll every 5 seconds for up to 2 minutes
+      for (let i = 0; i < 24; i++) {
+        const done = await pollStatus();
+        if (done) break;
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
+
       setAmount("");
       setPhone("");
     },
