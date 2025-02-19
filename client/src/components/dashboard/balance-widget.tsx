@@ -15,6 +15,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Wallet, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { Transaction } from "@shared/schema";
+import { Loader2 } from "lucide-react";
 
 interface BalanceWidgetProps {
   balance: number;
@@ -23,21 +24,30 @@ interface BalanceWidgetProps {
 
 export default function BalanceWidget({ balance, transactions }: BalanceWidgetProps) {
   const [amount, setAmount] = useState("");
+  const [phone, setPhone] = useState("");
   const { toast } = useToast();
 
   const depositMutation = useMutation({
-    mutationFn: async (amount: number) => {
-      const res = await apiRequest("POST", "/api/transactions/deposit", { amount });
+    mutationFn: async (data: { amount: number; phone: string }) => {
+      const res = await apiRequest("POST", "/api/transactions/deposit", data);
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       toast({
-        title: "Deposit successful",
-        description: `Added KES ${amount} to your balance`,
+        title: "STK Push sent",
+        description: "Please check your phone to complete payment",
       });
       setAmount("");
+      setPhone("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Deposit failed",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -79,17 +89,20 @@ export default function BalanceWidget({ balance, transactions }: BalanceWidgetPr
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Deposit Funds</DialogTitle>
+                    <DialogTitle>M-Pesa Deposit</DialogTitle>
                   </DialogHeader>
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();
-                      depositMutation.mutate(Number(amount));
+                      depositMutation.mutate({
+                        amount: Number(amount),
+                        phone: phone,
+                      });
                     }}
                     className="space-y-4"
                   >
                     <div>
-                      <Label htmlFor="amount">Amount</Label>
+                      <Label htmlFor="amount">Amount (KES)</Label>
                       <Input
                         id="amount"
                         type="number"
@@ -99,12 +112,29 @@ export default function BalanceWidget({ balance, transactions }: BalanceWidgetPr
                         onChange={(e) => setAmount(e.target.value)}
                       />
                     </div>
+                    <div>
+                      <Label htmlFor="phone">Phone Number</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="e.g. 0712345678"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                      />
+                    </div>
                     <Button
                       type="submit"
                       className="w-full"
                       disabled={depositMutation.isPending}
                     >
-                      Deposit
+                      {depositMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        "Pay with M-Pesa"
+                      )}
                     </Button>
                   </form>
                 </DialogContent>
@@ -129,7 +159,7 @@ export default function BalanceWidget({ balance, transactions }: BalanceWidgetPr
                     className="space-y-4"
                   >
                     <div>
-                      <Label htmlFor="amount">Amount</Label>
+                      <Label htmlFor="amount">Amount (KES)</Label>
                       <Input
                         id="amount"
                         type="number"
@@ -145,7 +175,14 @@ export default function BalanceWidget({ balance, transactions }: BalanceWidgetPr
                       className="w-full"
                       disabled={withdrawMutation.isPending}
                     >
-                      Withdraw
+                      {withdrawMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        "Withdraw"
+                      )}
                     </Button>
                   </form>
                 </DialogContent>

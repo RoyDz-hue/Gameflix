@@ -16,6 +16,7 @@ export interface IStorage {
   getUserGames(userId: number): Promise<Game[]>;
   getReferrals(referralCode: string): Promise<User[]>;
   sessionStore: session.Store;
+  updateTransactionStatus(transactionId: number, status: "pending" | "completed" | "failed"): Promise<Transaction>;
 }
 
 export class MemStorage implements IStorage {
@@ -98,6 +99,15 @@ export class MemStorage implements IStorage {
     return Array.from(this.users.values()).filter(
       (user) => user.referredBy === referralCode,
     );
+  }
+
+  async updateTransactionStatus(transactionId: number, status: "pending" | "completed" | "failed"): Promise<Transaction> {
+    const transaction = Array.from(this.transactions.values()).find(t => t.id === transactionId);
+    if (!transaction) throw new Error("Transaction not found");
+
+    transaction.status = status;
+    this.transactions.set(transaction.id, transaction);
+    return transaction;
   }
 }
 
