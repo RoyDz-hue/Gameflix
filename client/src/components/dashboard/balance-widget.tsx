@@ -18,7 +18,7 @@ import { Transaction } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 
 interface BalanceWidgetProps {
-  balance: number;
+  balance: number | string;
   transactions: Transaction[];
 }
 
@@ -26,6 +26,9 @@ export default function BalanceWidget({ balance, transactions }: BalanceWidgetPr
   const [amount, setAmount] = useState("");
   const [phone, setPhone] = useState("");
   const { toast } = useToast();
+
+  // Convert balance from string to number for display
+  const numericBalance = typeof balance === 'string' ? Number(balance) : balance;
 
   const depositMutation = useMutation({
     mutationFn: async (data: { amount: number; phone: string }) => {
@@ -57,7 +60,7 @@ export default function BalanceWidget({ balance, transactions }: BalanceWidgetPr
         throw new Error("Please enter a valid amount greater than 0");
       }
 
-      if (amount > Number(balance)) {
+      if (amount > numericBalance) {
         throw new Error("Insufficient balance for withdrawal");
       }
 
@@ -93,7 +96,7 @@ export default function BalanceWidget({ balance, transactions }: BalanceWidgetPr
       <CardContent>
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <p className="text-3xl font-bold">KES {balance.toFixed(2)}</p>
+            <p className="text-3xl font-bold">KES {numericBalance.toFixed(2)}</p>
             <div className="flex gap-2">
               <Dialog>
                 <DialogTrigger asChild>
@@ -179,7 +182,7 @@ export default function BalanceWidget({ balance, transactions }: BalanceWidgetPr
                         id="amount"
                         type="number"
                         min="1"
-                        max={balance}
+                        max={numericBalance}
                         step="1"
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
