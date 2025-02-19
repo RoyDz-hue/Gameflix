@@ -1,13 +1,17 @@
 import { InsertUser, User, Transaction, Game } from "@shared/schema";
-import createMemoryStore from "memorystore";
+import { users, transactions, games } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 import session from "express-session";
-import { nanoid } from "nanoid";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
 
-const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserBalance(userId: number, amount: number): Promise<User>;
   createTransaction(transaction: Omit<Transaction, "id">): Promise<Transaction>;
@@ -20,44 +24,33 @@ export interface IStorage {
   sessionStore: session.Store;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private transactions: Map<number, Transaction>;
-  private games: Map<number, Game>;
-  private currentId: number;
+export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    this.users = new Map();
-    this.transactions = new Map();
-    this.games = new Map();
-    this.currentId = 1;
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000,
+    this.sessionStore = new PostgresSessionStore({
+      pool,
+      createTableIfMissing: true,
     });
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentId++;
-    const user: User = {
-      ...insertUser,
-      id,
-      balance: "0",
-      referralCode: nanoid(8),
-      referredBy: null,
-      createdAt: new Date(),
-    };
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
 
@@ -65,65 +58,60 @@ export class MemStorage implements IStorage {
     const user = await this.getUser(userId);
     if (!user) throw new Error("User not found");
 
-    // Convert existing balance to number
     const currentBalance = Number(user.balance);
     const newBalance = currentBalance + amount;
 
-    // Prevent negative balance
     if (newBalance < 0) {
       throw new Error("Insufficient balance");
     }
 
-    // Update balance and convert back to string for storage
-    user.balance = newBalance.toString();
-    this.users.set(userId, user);
-    return user;
+    const [updatedUser] = await db
+      .update(users)
+      .set({ balance: newBalance.toString() })
+      .where(eq(users.id, userId))
+      .returning();
+
+    return updatedUser;
   }
 
   async createTransaction(transaction: Omit<Transaction, "id">): Promise<Transaction> {
-    const id = this.currentId++;
-    const newTransaction: Transaction = { ...transaction, id };
-    this.transactions.set(id, newTransaction);
+    const [newTransaction] = await db.insert(transactions).values(transaction).returning();
     return newTransaction;
   }
 
   async getUserTransactions(userId: number): Promise<Transaction[]> {
-    return Array.from(this.transactions.values()).filter(
-      (transaction) => transaction.userId === userId,
-    );
+    return db.select().from(transactions).where(eq(transactions.userId, userId));
   }
 
   async getAllTransactions(): Promise<Transaction[]> {
-    return Array.from(this.transactions.values());
+    return db.select().from(transactions);
   }
 
-  async updateTransactionStatus(transactionId: number, status: "pending" | "completed" | "failed"): Promise<Transaction> {
-    const transaction = Array.from(this.transactions.values()).find(t => t.id === transactionId);
-    if (!transaction) throw new Error("Transaction not found");
+  async updateTransactionStatus(
+    transactionId: number,
+    status: "pending" | "completed" | "failed"
+  ): Promise<Transaction> {
+    const [transaction] = await db
+      .update(transactions)
+      .set({ status })
+      .where(eq(transactions.id, transactionId))
+      .returning();
 
-    transaction.status = status;
-    this.transactions.set(transaction.id, transaction);
     return transaction;
   }
 
   async createGame(game: Omit<Game, "id">): Promise<Game> {
-    const id = this.currentId++;
-    const newGame: Game = { ...game, id };
-    this.games.set(id, newGame);
+    const [newGame] = await db.insert(games).values(game).returning();
     return newGame;
   }
 
   async getUserGames(userId: number): Promise<Game[]> {
-    return Array.from(this.games.values()).filter(
-      (game) => game.userId === userId,
-    );
+    return db.select().from(games).where(eq(games.userId, userId));
   }
 
   async getReferrals(referralCode: string): Promise<User[]> {
-    return Array.from(this.users.values()).filter(
-      (user) => user.referredBy === referralCode,
-    );
+    return db.select().from(users).where(eq(users.referredBy, referralCode));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

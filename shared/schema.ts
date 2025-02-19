@@ -5,6 +5,8 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
+  email: text("email").notNull().unique(),
+  phoneNumber: text("phone_number").notNull(),
   password: text("password").notNull(),
   balance: decimal("balance", { precision: 12, scale: 2 }).notNull().default("0"),
   referralCode: text("referral_code").notNull(),
@@ -36,8 +38,11 @@ export const games = pgTable("games", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// Update the insert schema to include email and phone
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
+  email: true,
+  phoneNumber: true,
   password: true,
 });
 
