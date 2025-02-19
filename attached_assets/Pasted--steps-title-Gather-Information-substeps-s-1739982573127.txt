@@ -1,0 +1,90 @@
+{
+  "steps": [
+    {
+      "title": "Gather Information",
+      "substeps": [
+        {
+          "substep_title": "Review current HTML file to understand existing structure and functionality",
+          "reason": "Focus on the HTML file as a starting point to understand the current implementation",
+          "description": "Analyze the spindrawsM.html file to get insights into the existing structure and functionality."
+        },
+        {
+          "substep_title": "Identify key requirements for system components",
+          "reason": "Clear understanding needed for planning",
+          "description": "List the key requirements for logic, dashboard, financials, referral system, game, withdrawal, recharge/deposit, rules, and database."
+        }
+      ]
+    },
+    {
+      "title": "Detailed Planning",
+      "substeps": [
+        {
+          "substep_title": "Define logic and flow of the system",
+          "reason": "Ensure clear understanding of overall system functionality",
+          "description": "Create a detailed logic and flowchart for the entire system, covering all components."
+        },
+        {
+          "substep_title": "Outline design and features for the dashboard",
+          "reason": "Dashboard is a crucial part for user interface",
+          "description": "Design the dashboard layout and define its features, including user statistics, recent activities, notifications, etc."
+        },
+        {
+          "substep_title": "Specify the financial transactions and referral system mechanics",
+          "reason": "Important for financials and referrals",
+          "description": "Detail out the mechanics for handling financial transactions and the referral system, including reward calculations and tracking."
+        }
+      ]
+    },
+    {
+      "title": "Follow-up Steps",
+      "substeps": [
+        {
+          "substep_title": "Analyze existing code or templates related to game, withdrawal, recharge or deposit, and rules",
+          "description": "Review the existing code or templates for these components to understand their current implementation and plan enhancements."
+        },
+        {
+          "substep_title": "Decide on a database choice other than Firebase and plan its schema accordingly",
+          "description": "Choose an appropriate database (e.g., MySQL, MongoDB) and design the schema for storing and retrieving data for all components."
+        }
+      ]
+    }
+  ],
+  "components": [
+    {
+      "name": "Logic",
+      "description": "Define the overall logic and flow of the system, ensuring all components interact seamlessly."
+    },
+    {
+      "name": "Dashboard",
+      "description": "Create a user-friendly dashboard that displays user statistics, recent activities, notifications, and other relevant information."
+    },
+    {
+      "name": "Financials",
+      "description": "Implement financial transactions, including handling deposits, withdrawals, and tracking user balances."
+    },
+    {
+      "name": "Referral System",
+      "description": "Set up a referral system that tracks user referrals, calculates rewards, and manages referral data."
+    },
+    {
+      "name": "Game",
+      "description": "Develop the game mechanics, including user interactions, scoring, and rewards."
+    },
+    {
+      "name": "Withdrawal",
+      "description": "Implement withdrawal functionality using the PayHero API, allowing users to withdraw funds to their mobile."
+    },
+    {
+      "name": "Recharge or Deposit",
+      "description": "Set up a system for users to recharge or deposit funds into their accounts, ensuring secure and efficient transactions."
+    },
+    {
+      "name": "Rules",
+      "description": "Define the rules and guidelines for using the system, including user conduct, transaction limits, and referral policies."
+    },
+    {
+      "name": "Database",
+      "description": "Choose a database system (e.g., MySQL, MongoDB) and design the schema to store and manage data for all components."
+    }
+  ]
+}
