@@ -16,7 +16,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Initiate STK push
       const payment = await payHero.initiateSTKPush(
-        Number(amount), 
+        Number(amount),
         phone,
         req.user.id
       );
@@ -32,8 +32,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: new Date()
       });
 
-      res.json({ 
-        ...transaction, 
+      res.json({
+        ...transaction,
         paymentRef: payment.reference,
         checkoutRequestId: payment.checkout_request_id,
         status: payment.status
@@ -51,18 +51,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).send("Insufficient balance");
     }
 
-    const transaction = await storage.createTransaction({
-      userId: req.user.id,
-      type: "withdrawal",
-      amount: (-req.body.amount).toString(),
-      status: "completed",
-      transactionId: null,
-      phoneNumber: null,
-      createdAt: new Date()
-    });
+    try {
+      // Initiate withdrawal via PayHero
+      const payment = await payHero.initiateWithdrawal(
+        Number(req.body.amount),
+        req.body.phone,
+        req.user.id
+      );
 
-    await storage.updateUserBalance(req.user.id, -Number(req.body.amount));
-    res.json(transaction);
+      // Create pending transaction
+      const transaction = await storage.createTransaction({
+        userId: req.user.id,
+        type: "withdrawal",
+        amount: (-req.body.amount).toString(), // Negative amount for withdrawals
+        status: "pending",
+        transactionId: payment.reference,
+        phoneNumber: req.body.phone,
+        checkoutRequestId: payment.checkout_request_id,
+        providerReference: null,
+        createdAt: new Date()
+      });
+
+      // Only deduct balance after successful withdrawal (handled in callback)
+      res.json({
+        ...transaction,
+        paymentRef: payment.reference,
+        checkoutRequestId: payment.checkout_request_id,
+        status: payment.status
+      });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
   });
 
   app.post("/api/transactions/callback", async (req, res) => {

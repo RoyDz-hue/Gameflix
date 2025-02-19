@@ -55,16 +55,16 @@ export default function BalanceWidget({ balance, transactions }: BalanceWidgetPr
   });
 
   const withdrawMutation = useMutation({
-    mutationFn: async (amount: number) => {
-      if (amount <= 0) {
+    mutationFn: async (data: {amount: number; phone: string}) => {
+      if (data.amount <= 0) {
         throw new Error("Please enter a valid amount greater than 0");
       }
 
-      if (amount > numericBalance) {
+      if (data.amount > numericBalance) {
         throw new Error("Insufficient balance for withdrawal");
       }
 
-      const res = await apiRequest("POST", "/api/transactions/withdraw", { amount });
+      const res = await apiRequest("POST", "/api/transactions/withdraw", data);
       return await res.json();
     },
     onSuccess: () => {
@@ -75,6 +75,7 @@ export default function BalanceWidget({ balance, transactions }: BalanceWidgetPr
         description: `Withdrawn KES ${amount} from your balance`,
       });
       setAmount("");
+      setPhone("");
     },
     onError: (error: Error) => {
       toast({
@@ -167,12 +168,15 @@ export default function BalanceWidget({ balance, transactions }: BalanceWidgetPr
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Withdraw Funds</DialogTitle>
+                    <DialogTitle>M-Pesa Withdrawal</DialogTitle>
                   </DialogHeader>
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();
-                      withdrawMutation.mutate(Number(amount));
+                      withdrawMutation.mutate({
+                        amount: Number(amount),
+                        phone: phone
+                      });
                     }}
                     className="space-y-4"
                   >
@@ -188,6 +192,16 @@ export default function BalanceWidget({ balance, transactions }: BalanceWidgetPr
                         onChange={(e) => setAmount(e.target.value)}
                       />
                     </div>
+                    <div>
+                      <Label htmlFor="withdraw-phone">Phone Number</Label>
+                      <Input
+                        id="withdraw-phone"
+                        type="tel"
+                        placeholder="e.g. 0712345678"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                      />
+                    </div>
                     <Button
                       type="submit"
                       className="w-full"
@@ -199,7 +213,7 @@ export default function BalanceWidget({ balance, transactions }: BalanceWidgetPr
                           Processing...
                         </>
                       ) : (
-                        "Withdraw"
+                        "Withdraw to M-Pesa"
                       )}
                     </Button>
                   </form>

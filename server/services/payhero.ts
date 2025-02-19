@@ -83,6 +83,42 @@ export class PayHeroService {
     return paymentResponseSchema.parse(data);
   }
 
+  async initiateWithdrawal(amount: number, phone: string, userId: number): Promise<PaymentResponse> {
+    const formattedPhone = this.formatPhoneNumber(phone);
+    if (!formattedPhone.match(/^254\d{9}$/)) {
+      throw new Error('Invalid phone number');
+    }
+
+    const payload = {
+      amount: Math.floor(amount),
+      phone_number: formattedPhone,
+      channel_id: '1487',
+      external_reference: `withdraw_${Date.now()}_${userId}`,
+      provider: 'm-pesa',
+      channel: 'mobile',
+      payment_service: 'b2c',
+      network_code: '63902',
+      callback_url: process.env.PAYHERO_CALLBACK_URL
+    };
+
+    const response = await fetch(`${this.baseUrl}withdraw`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${this.credentials}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Withdrawal initiation failed');
+    }
+
+    const data = await response.json();
+    return paymentResponseSchema.parse(data);
+  }
+
   async checkTransactionStatus(reference: string): Promise<TransactionStatus> {
     const response = await fetch(
       `${this.baseUrl}transaction-status?reference=${reference}`,
