@@ -18,8 +18,10 @@ export const transactions = pgTable("transactions", {
   type: text("type", { enum: ["deposit", "withdrawal", "game", "referral"] }).notNull(),
   amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
   status: text("status", { enum: ["pending", "completed", "failed"] }).notNull(),
-  transactionId: text("transaction_id"),  // For PayHero transaction reference
+  transactionId: text("transaction_id"),  // PayHero reference
   phoneNumber: text("phone_number"),      // For mobile money transactions
+  checkoutRequestId: text("checkout_request_id"), // PayHero checkout request ID
+  providerReference: text("provider_reference"), // PayHero provider reference
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

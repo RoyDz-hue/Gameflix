@@ -12,11 +12,12 @@ export interface IStorage {
   updateUserBalance(userId: number, amount: number): Promise<User>;
   createTransaction(transaction: Omit<Transaction, "id">): Promise<Transaction>;
   getUserTransactions(userId: number): Promise<Transaction[]>;
+  getAllTransactions(): Promise<Transaction[]>;
+  updateTransactionStatus(transactionId: number, status: "pending" | "completed" | "failed"): Promise<Transaction>;
   createGame(game: Omit<Game, "id">): Promise<Game>;
   getUserGames(userId: number): Promise<Game[]>;
   getReferrals(referralCode: string): Promise<User[]>;
   sessionStore: session.Store;
-  updateTransactionStatus(transactionId: number, status: "pending" | "completed" | "failed"): Promise<Transaction>;
 }
 
 export class MemStorage implements IStorage {
@@ -63,8 +64,9 @@ export class MemStorage implements IStorage {
   async updateUserBalance(userId: number, amount: number): Promise<User> {
     const user = await this.getUser(userId);
     if (!user) throw new Error("User not found");
-    
-    user.balance += amount;
+
+    const newBalance = Number(user.balance) + amount;
+    user.balance = newBalance;
     this.users.set(userId, user);
     return user;
   }
@@ -80,6 +82,19 @@ export class MemStorage implements IStorage {
     return Array.from(this.transactions.values()).filter(
       (transaction) => transaction.userId === userId,
     );
+  }
+
+  async getAllTransactions(): Promise<Transaction[]> {
+    return Array.from(this.transactions.values());
+  }
+
+  async updateTransactionStatus(transactionId: number, status: "pending" | "completed" | "failed"): Promise<Transaction> {
+    const transaction = Array.from(this.transactions.values()).find(t => t.id === transactionId);
+    if (!transaction) throw new Error("Transaction not found");
+
+    transaction.status = status;
+    this.transactions.set(transaction.id, transaction);
+    return transaction;
   }
 
   async createGame(game: Omit<Game, "id">): Promise<Game> {
@@ -99,15 +114,6 @@ export class MemStorage implements IStorage {
     return Array.from(this.users.values()).filter(
       (user) => user.referredBy === referralCode,
     );
-  }
-
-  async updateTransactionStatus(transactionId: number, status: "pending" | "completed" | "failed"): Promise<Transaction> {
-    const transaction = Array.from(this.transactions.values()).find(t => t.id === transactionId);
-    if (!transaction) throw new Error("Transaction not found");
-
-    transaction.status = status;
-    this.transactions.set(transaction.id, transaction);
-    return transaction;
   }
 }
 

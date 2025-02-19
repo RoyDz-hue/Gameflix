@@ -1,12 +1,29 @@
 import { z } from "zod";
 
 const paymentResponseSchema = z.object({
+  status: z.enum(["QUEUED", "SUCCESS", "FAILED"]),
+  merchant_reference: z.string().optional(),
+  checkout_request_id: z.string().optional(),
+  response_code: z.string().optional(),
+  conversation_id: z.string().optional(),
+  reference: z.string()
+});
+
+const transactionStatusSchema = z.object({
+  transaction_date: z.string().optional(),
+  provider: z.string(),
+  success: z.boolean(),
+  merchant: z.string().optional(),
+  payment_reference: z.string(),
+  third_party_reference: z.string(),
+  status: z.enum(["QUEUED", "SUCCESS", "FAILED"]),
   reference: z.string(),
-  status: z.string(),
-  message: z.string()
+  CheckoutRequestID: z.string(),
+  provider_reference: z.string()
 });
 
 export type PaymentResponse = z.infer<typeof paymentResponseSchema>;
+export type TransactionStatus = z.infer<typeof transactionStatusSchema>;
 
 export class PayHeroService {
   private baseUrl = 'https://backend.payhero.co.ke/api/v2/';
@@ -42,6 +59,9 @@ export class PayHeroService {
       channel_id: '1487',
       external_reference: `spin_${Date.now()}_${userId}`,
       provider: 'm-pesa',
+      channel: 'mobile',
+      payment_service: 'c2b',
+      network_code: '63902', // Safaricom network code
       callback_url: process.env.PAYHERO_CALLBACK_URL
     };
 
@@ -63,7 +83,7 @@ export class PayHeroService {
     return paymentResponseSchema.parse(data);
   }
 
-  async checkTransactionStatus(reference: string): Promise<PaymentResponse> {
+  async checkTransactionStatus(reference: string): Promise<TransactionStatus> {
     const response = await fetch(
       `${this.baseUrl}transaction-status?reference=${reference}`,
       {
@@ -80,7 +100,7 @@ export class PayHeroService {
     }
 
     const data = await response.json();
-    return paymentResponseSchema.parse(data);
+    return transactionStatusSchema.parse(data);
   }
 }
 
