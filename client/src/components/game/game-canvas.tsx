@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 
 interface GameCanvasProps {
   isPlaying: boolean;
-  onGameEnd: (score: number) => void;
+  onGameEnd: (score: number, multiplier: number) => void;
 }
 
 export default function GameCanvas({ isPlaying, onGameEnd }: GameCanvasProps) {
@@ -13,6 +13,7 @@ export default function GameCanvas({ isPlaying, onGameEnd }: GameCanvasProps) {
     speed: 0,
     decelerating: false,
     score: 0,
+    multiplier: 1, // Added multiplier property
   });
 
   useEffect(() => {
@@ -46,6 +47,22 @@ export default function GameCanvas({ isPlaying, onGameEnd }: GameCanvasProps) {
       "#E76F51",
     ];
 
+    // Define multipliers for each section
+    const multipliers = [
+      0.5, // Red
+      1.2, // Cyan
+      1.5, // Blue
+      1.8, // Green
+      2.0, // Yellow
+      2.2, // Pink
+      2.5, // Gray
+      2.8, // Gold
+      3.0, // Navy
+      3.5, // Teal
+      4.0, // Orange
+      5.0, // Red-Orange
+    ];
+
     function drawWheel() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -69,17 +86,15 @@ export default function GameCanvas({ isPlaying, onGameEnd }: GameCanvasProps) {
         ctx.fill();
         ctx.stroke();
 
-        // Draw numbers
+        // Draw numbers and multipliers
         ctx.save();
         ctx.translate(centerX, centerY);
-        ctx.rotate(
-          angle + stateRef.current.rotation + Math.PI / sections
-        );
+        ctx.rotate(angle + stateRef.current.rotation + Math.PI / sections);
         ctx.textAlign = "center";
         ctx.fillStyle = "#fff";
         ctx.font = "bold 20px Arial";
         ctx.fillText(
-          ((i + 1) * 10).toString(),
+          `${multipliers[i]}x`, // Updated to display multiplier
           radius * 0.75,
           0
         );
@@ -110,15 +125,18 @@ export default function GameCanvas({ isPlaying, onGameEnd }: GameCanvasProps) {
       } else {
         stateRef.current.speed *= 0.99;
         if (stateRef.current.speed < 0.001) {
-          // Calculate score
+          // Calculate score using multiplier
           const normalizedRotation =
             ((stateRef.current.rotation % (2 * Math.PI)) + 2 * Math.PI) %
             (2 * Math.PI);
           const section = Math.floor(
             (normalizedRotation / (2 * Math.PI)) * sections
           );
-          stateRef.current.score = (section + 1) * 10;
-          onGameEnd(stateRef.current.score);
+          const multiplier = multipliers[section];
+          const baseScore = Math.floor(Math.random() * 100); // Random base score
+          stateRef.current.score = Math.round(baseScore * multiplier);
+          stateRef.current.multiplier = multiplier;
+          onGameEnd(stateRef.current.score, stateRef.current.multiplier); // Pass multiplier to onGameEnd
           return;
         }
       }
@@ -136,6 +154,7 @@ export default function GameCanvas({ isPlaying, onGameEnd }: GameCanvasProps) {
         speed: 0,
         decelerating: false,
         score: 0,
+        multiplier: 1, // Added multiplier property
       };
 
       // Start spinning

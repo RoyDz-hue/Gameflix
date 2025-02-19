@@ -6,7 +6,7 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  balance: decimal("balance", { precision: 10, scale: 2 }).notNull().default("0"),
+  balance: decimal("balance", { precision: 12, scale: 2 }).notNull().default("0"),
   referralCode: text("referral_code").notNull(),
   referredBy: text("referred_by"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -16,17 +16,21 @@ export const transactions = pgTable("transactions", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
   type: text("type", { enum: ["deposit", "withdrawal", "game", "referral"] }).notNull(),
-  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
   status: text("status", { enum: ["pending", "completed", "failed"] }).notNull(),
+  transactionId: text("transaction_id"),  // For PayHero transaction reference
+  phoneNumber: text("phone_number"),      // For mobile money transactions
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const games = pgTable("games", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),  
+  gameType: text("game_type", { enum: ["wheel", "box"] }).notNull().default("wheel"),
   score: integer("score").notNull(),
-  bet: decimal("bet", { precision: 10, scale: 2 }).notNull(),
-  result: decimal("result", { precision: 10, scale: 2 }).notNull(),
+  bet: decimal("bet", { precision: 12, scale: 2 }).notNull(),
+  multiplier: decimal("multiplier", { precision: 5, scale: 2 }).notNull(),
+  result: decimal("result", { precision: 12, scale: 2 }).notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

@@ -18,14 +18,16 @@ export default function Game() {
   const [isPlaying, setIsPlaying] = useState(false);
 
   const gameMutation = useMutation({
-    mutationFn: async (score: number) => {
+    mutationFn: async (data: { score: number, multiplier: number }) => {
       const betAmount = Number(bet);
-      const result = score > 50 ? betAmount : -betAmount;
-      
+      const result = betAmount * data.multiplier;
+
       const res = await apiRequest("POST", "/api/games", {
-        score,
+        gameType: "wheel",
+        score: data.score,
         bet: betAmount,
-        result,
+        multiplier: data.multiplier,
+        result: result - betAmount, // Net win/loss
       });
       return res.json();
     },
@@ -34,14 +36,14 @@ export default function Game() {
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       toast({
         title: "Game completed!",
-        description: "Your score has been recorded.",
+        description: "Your score and winnings have been recorded.",
       });
     },
   });
 
-  const handleGameEnd = (score: number) => {
+  const handleGameEnd = (score: number, multiplier: number) => {
     setIsPlaying(false);
-    gameMutation.mutate(score);
+    gameMutation.mutate({score, multiplier});
   };
 
   const startGame = () => {
@@ -68,7 +70,7 @@ export default function Game() {
           </Link>
           <div className="text-right">
             <p className="text-sm text-muted-foreground">Balance</p>
-            <p className="text-xl font-bold">${user?.balance}</p>
+            <p className="text-xl font-bold">KES {user?.balance}</p>
           </div>
         </div>
 

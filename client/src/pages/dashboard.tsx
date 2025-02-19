@@ -22,8 +22,8 @@ export default function Dashboard() {
 
   const totalGames = games?.length ?? 0;
   const totalWinnings = games?.reduce((sum, game) => sum + Number(game.result), 0) ?? 0;
-  const winRate = totalGames ? 
-    (games?.filter(game => Number(game.result) > 0).length ?? 0) / totalGames * 100 : 
+  const winRate = totalGames ?
+    (games?.filter(game => Number(game.result) > 0).length ?? 0) / totalGames * 100 :
     0;
 
   return (
@@ -51,7 +51,7 @@ export default function Dashboard() {
             stats={[
               { label: "Total Games", value: totalGames.toString() },
               { label: "Win Rate", value: `${winRate.toFixed(1)}%` },
-              { label: "Total Winnings", value: `$${totalWinnings.toFixed(2)}` },
+              { label: "Total Winnings", value: `KES ${totalWinnings.toFixed(2)}` },
             ]}
           />
         </div>
@@ -77,7 +77,7 @@ export default function Dashboard() {
                     </p>
                   </div>
                   <p className={`font-medium ${Number(tx.amount) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {Number(tx.amount) >= 0 ? '+' : ''}{tx.amount}
+                    {Number(tx.amount) >= 0 ? '+' : ''}KES {Math.abs(Number(tx.amount)).toFixed(2)}
                   </p>
                 </div>
               ))}
@@ -104,7 +104,7 @@ export default function Dashboard() {
                     </p>
                   </div>
                   <p className={`font-medium ${Number(game.result) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {Number(game.result) >= 0 ? '+' : ''}{game.result}
+                    {Number(game.result) >= 0 ? '+' : ''}KES {Math.abs(Number(game.result)).toFixed(2)}
                   </p>
                 </div>
               ))}

@@ -35,7 +35,7 @@ export default function BalanceWidget({ balance, transactions }: BalanceWidgetPr
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       toast({
         title: "Deposit successful",
-        description: `Added $${amount} to your balance`,
+        description: `Added KES ${amount} to your balance`,
       });
       setAmount("");
     },
@@ -51,7 +51,7 @@ export default function BalanceWidget({ balance, transactions }: BalanceWidgetPr
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       toast({
         title: "Withdrawal successful",
-        description: `Withdrawn $${amount} from your balance`,
+        description: `Withdrawn KES ${amount} from your balance`,
       });
       setAmount("");
     },
@@ -68,7 +68,7 @@ export default function BalanceWidget({ balance, transactions }: BalanceWidgetPr
       <CardContent>
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <p className="text-3xl font-bold">${balance.toFixed(2)}</p>
+            <p className="text-3xl font-bold">KES {balance.toFixed(2)}</p>
             <div className="flex gap-2">
               <Dialog>
                 <DialogTrigger asChild>
