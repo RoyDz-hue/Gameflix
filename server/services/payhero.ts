@@ -116,7 +116,7 @@ export class PayHeroService {
       network_code: '63902',
       callback_url: process.env.PAYHERO_CALLBACK_URL,
       channel: 'mobile',
-      channel_id: 1564, // Using the correct channel ID as a number
+      channel_id: 1564,
       payment_service: 'b2c'
     };
 
@@ -161,21 +161,15 @@ export class PayHeroService {
         throw new Error(errorMessage);
       }
 
-      // Parse successful response
-      if (data.response) {
-        return paymentResponseSchema.parse({
-          status: data.response.Status === "Success" ? "SUCCESS" : "QUEUED",
-          merchant_reference: data.response.MerchantRequestID,
-          checkout_request_id: data.response.CheckoutRequestID,
-          response_code: data.response.ResultCode?.toString(),
-          conversation_id: data.response.TransactionID,
-          reference: externalReference
-        });
-      }
-
-      // If response doesn't match expected format
-      console.error('Unexpected API response format:', data);
-      throw new Error('Unexpected API response format');
+      // Handle the direct response format
+      return paymentResponseSchema.parse({
+        status: data.status,
+        merchant_reference: data.merchant_reference,
+        checkout_request_id: data.checkout_request_id,
+        response_code: data.response_code,
+        conversation_id: data.conversation_id,
+        reference: externalReference
+      });
 
     } catch (error: any) {
       console.error('Withdrawal Error:', {
