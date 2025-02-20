@@ -33,8 +33,17 @@ export class PayHeroService {
   constructor() {
     this.baseUrl = process.env.API_BASE_URL || 'https://backend.payhero.co.ke/api/v2/';
     this.merchantId = process.env.PAYHERO_MERCHANT_ID || '';
-    const apiKey = process.env.PAYHERO_API_KEY || '';
-    this.credentials = Buffer.from(`${apiKey}:${this.merchantId}`).toString('base64');
+
+    // Get API credentials from environment variables
+    const apiUsername = process.env.API_USERNAME;
+    const apiPassword = process.env.API_PASSWORD;
+
+    if (!apiUsername || !apiPassword) {
+      throw new Error('API_USERNAME and API_PASSWORD must be set');
+    }
+
+    // Create Basic Auth token as shown in the PHP example
+    this.credentials = Buffer.from(`${apiUsername}:${apiPassword}`).toString('base64');
   }
 
   private formatPhoneNumber(phone: string): string {
@@ -94,19 +103,27 @@ export class PayHeroService {
     const externalReference = `withdraw_${Date.now()}_${userId}`;
 
     const payload = {
+      external_reference: externalReference,
       amount: Math.floor(amount),
       phone_number: formattedPhone,
       network_code: '63902',
-      external_reference: externalReference,
       callback_url: process.env.PAYHERO_CALLBACK_URL,
-      channel_id: this.merchantId,
       channel: 'mobile',
-      payment_service: 'b2c',
-      provider: 'm-pesa'
+      channel_id: this.merchantId,
+      payment_service: 'b2c'
     };
 
     try {
-      const response = await fetch(`${this.baseUrl}sasa-pay/withdraw-mobile`, {
+      console.log('Withdrawal Request:', {
+        url: `${this.baseUrl}withdraw`,
+        headers: {
+          'Authorization': `Basic ${this.credentials}`,
+          'Content-Type': 'application/json'
+        },
+        payload
+      });
+
+      const response = await fetch(`${this.baseUrl}withdraw`, {
         method: 'POST',
         headers: {
           'Authorization': `Basic ${this.credentials}`,
