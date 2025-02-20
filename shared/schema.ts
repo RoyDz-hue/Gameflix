@@ -38,7 +38,6 @@ export const games = pgTable("games", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-// Update the insert schema to include email and phone
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   email: true,

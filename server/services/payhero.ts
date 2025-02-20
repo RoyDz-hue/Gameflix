@@ -100,11 +100,6 @@ export class PayHeroService {
     };
 
     try {
-      console.log('Withdrawal Request:', {
-        url: `${this.baseUrl}withdraw`,
-        payload
-      });
-
       const response = await fetch(`${this.baseUrl}withdraw`, {
         method: 'POST',
         headers: {
@@ -116,16 +111,8 @@ export class PayHeroService {
 
       const data = await response.json() as PayHeroSuccessResponse;
 
-      console.log('Withdrawal API Response:', {
-        status: response.status,
-        statusText: response.statusText,
-        data
-      });
-
       if (!response.ok) {
         const error = data as WithdrawalError;
-        console.error('Withdrawal Error Response:', error);
-
         const errorMessage = [
           error.error_message || error.message || 'Unknown error',
           error.error_code ? `Error code: ${error.error_code}` : null,
@@ -156,11 +143,6 @@ export class PayHeroService {
       });
 
     } catch (error: any) {
-      console.error('Withdrawal Error:', {
-        message: error.message,
-        cause: error.cause,
-        stack: error.stack
-      });
       throw new Error(error.message || 'Withdrawal initiation failed');
     }
   }
@@ -203,7 +185,6 @@ export class PayHeroService {
       const data = await response.json();
       return paymentResponseSchema.parse(data);
     } catch (error: any) {
-      console.error('STK Push Error:', error);
       throw new Error(error.message || 'Payment initiation failed');
     }
   }
@@ -226,7 +207,6 @@ export class PayHeroService {
       }
 
       const data = await response.json();
-      console.log('Transaction Status Response:', data);
 
       if (data.response && this.isSuccessStatus(data.response.Status)) {
         return transactionStatusSchema.parse({
@@ -243,7 +223,6 @@ export class PayHeroService {
 
       return transactionStatusSchema.parse(data);
     } catch (error: any) {
-      console.error('Status Check Error:', error);
       throw new Error(error.message || 'Transaction status check failed');
     }
   }
