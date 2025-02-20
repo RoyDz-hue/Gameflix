@@ -1,43 +1,13 @@
-├── client/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── ui/
-│   │   │   │   ├── button.tsx
-│   │   │   │   ├── card.tsx
-│   │   │   │   ├── form.tsx
-│   │   │   ├── dashboard/
-│   │   │   └── game/
-│   │   ├── hooks/
-│   │   │   ├── use-auth.tsx
-│   │   │   └── use-toast.tsx
-│   │   ├── lib/
-│   │   │   ├── protected-route.tsx
-│   │   │   └── queryClient.ts
-│   │   ├── pages/
-│   │   │   ├── auth-page.tsx
-│   │   │   ├── dashboard.tsx
-│   │   │   └── game.tsx
-│   │   ├── App.tsx
-│   │   └── main.tsx
-│   └── index.html
-├── server/
-│   ├── services/
-│   │   └── payhero.ts
-│   ├── auth.ts
-│   ├── db.ts
-│   ├── routes.ts
-│   ├── storage.ts
-│   └── index.ts
-├── shared/
-│   └── schema.ts
-├── package.json
-├── tsconfig.json
-└── vite.config.ts
+git clone <your-repository-url>
+cd payhero-gaming-platform
+```
 
-## Required Environment Variables
+2. Install dependencies:
+```bash
+npm install
+```
 
-Create a `.env` file with the following variables:
-
+3. Create a `.env` file in the root directory with the following variables:
 ```env
 # Database Configuration
 DATABASE_URL=postgresql://user:password@host:5432/dbname
@@ -56,19 +26,32 @@ PAYHERO_API_PASSWORD=your_payhero_password
 API_BASE_URL=https://backend.payhero.co.ke/api/v2/
 ```
 
-## Installation
-
-1. Clone the repository
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Set up the database:
+4. Set up the database:
 ```bash
 npm run db:push
 ```
 
-4. Start the development server:
+5. Start the development server:
 ```bash
 npm run dev
+```
+
+Visit `http://localhost:5000` to see the application.
+
+## Project Structure
+
+```
+├── client/            # Frontend React application
+│   ├── src/
+│   │   ├── components/  # Reusable UI components
+│   │   ├── hooks/      # Custom React hooks
+│   │   ├── lib/        # Utility functions and configurations
+│   │   ├── pages/      # Page components
+│   │   └── App.tsx     # Main application component
+├── server/            # Backend Express application
+│   ├── services/      # External service integrations
+│   ├── auth.ts        # Authentication logic
+│   ├── routes.ts      # API routes
+│   └── storage.ts     # Database operations
+└── shared/            # Shared types and schemas
+    └── schema.ts      # Database schema definitions
