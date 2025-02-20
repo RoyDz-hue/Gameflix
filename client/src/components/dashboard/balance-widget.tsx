@@ -98,19 +98,26 @@ export default function BalanceWidget({ balance, transactions }: BalanceWidgetPr
       return await res.json();
     },
     onSuccess: async (data) => {
-      // Start polling for transaction status
-      const pollStatus = async () => {
+      // Status check for withdrawal
+      const checkStatus = async () => {
         try {
           const res = await apiRequest("GET", `/api/transactions/status/${data.paymentRef}`);
           const status = await res.json();
 
-          if (status.status === "SUCCESS" && status.success === true) {
+          // Check for both "Success" and "SUCCESS" in the response
+          const isSuccess = status.status?.toLowerCase() === 'success' || 
+                          status.response?.Status?.toLowerCase() === 'success' ||
+                          (status.success === true && status.status?.toLowerCase() === 'success');
+
+          if (isSuccess) {
             queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
             queryClient.invalidateQueries({ queryKey: ["/api/user"] });
             toast({
               title: "Withdrawal successful",
               description: `Withdrawn KES ${amount} from your balance`,
             });
+            setAmount("");
+            setPhone("");
             return true;
           } else if (status.status === "FAILED" || status.success === false) {
             toast({
@@ -122,15 +129,20 @@ export default function BalanceWidget({ balance, transactions }: BalanceWidgetPr
           }
           return false;
         } catch (error) {
+          console.error('Status check error:', error);
           return false;
         }
       };
 
-      // Poll every 5 seconds for up to 2 minutes
-      for (let i = 0; i < 24; i++) {
-        const done = await pollStatus();
-        if (done) break;
+      // Check status immediately
+      const initialStatus = await checkStatus();
+      if (initialStatus) return;
+
+      // If not immediately successful, poll every 5 seconds for up to 30 seconds
+      for (let i = 0; i < 6; i++) {
         await new Promise(resolve => setTimeout(resolve, 5000));
+        const done = await checkStatus();
+        if (done) break;
       }
 
       setAmount("");

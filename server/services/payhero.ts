@@ -29,6 +29,22 @@ interface WithdrawalError {
   message?: string;
 }
 
+interface PayHeroSuccessResponse {
+  forward_url?: string;
+  response?: {
+    Amount: number;
+    CheckoutRequestID: string;
+    ExternalReference: string;
+    MerchantRequestID: string;
+    RecipientAccountNumber: string;
+    ResultCode: number;
+    ResultDesc: string;
+    Status: string;
+    TransactionID: string;
+  };
+  status?: boolean;
+}
+
 export type PaymentResponse = z.infer<typeof paymentResponseSchema>;
 export type TransactionStatus = z.infer<typeof transactionStatusSchema>;
 
@@ -41,7 +57,6 @@ export class PayHeroService {
     this.baseUrl = process.env.API_BASE_URL || 'https://backend.payhero.co.ke/api/v2/';
     this.merchantId = process.env.PAYHERO_MERCHANT_ID || '';
 
-    // Get API credentials from environment variables
     const apiUsername = process.env.API_USERNAME;
     const apiPassword = process.env.API_PASSWORD;
 
@@ -49,7 +64,6 @@ export class PayHeroService {
       throw new Error('API_USERNAME and API_PASSWORD must be set');
     }
 
-    // Create Basic Auth token as shown in the PHP example
     this.credentials = Buffer.from(`${apiUsername}:${apiPassword}`).toString('base64');
   }
 
@@ -58,6 +72,101 @@ export class PayHeroService {
     if (phone.length === 9) return '254' + phone;
     if (phone.length === 10 && phone.startsWith('0')) return '254' + phone.slice(1);
     return phone.replace(/^(?:254|\+254|0)(\d{9})$/, '254$1');
+  }
+
+  private isSuccessStatus(status: string): boolean {
+    return status.toLowerCase() === 'success';
+  }
+
+  async initiateWithdrawal(amount: number, phone: string, userId: number): Promise<PaymentResponse> {
+    const formattedPhone = this.formatPhoneNumber(phone);
+    if (!formattedPhone.match(/^254\d{9}$/)) {
+      throw new Error('Invalid phone number');
+    }
+
+    const externalReference = `withdraw_${Date.now()}_${userId}`;
+
+    const payload = {
+      external_reference: externalReference,
+      amount: Math.floor(amount),
+      phone_number: formattedPhone,
+      network_code: '63902',
+      callback_url: process.env.PAYHERO_CALLBACK_URL,
+      channel: 'mobile',
+      channel_id: 1564,
+      payment_service: 'b2c'
+    };
+
+    try {
+      console.log('Withdrawal Request:', {
+        url: `${this.baseUrl}withdraw`,
+        headers: {
+          'Authorization': `Basic ${this.credentials}`,
+          'Content-Type': 'application/json'
+        },
+        payload
+      });
+
+      const response = await fetch(`${this.baseUrl}withdraw`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${this.credentials}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json() as PayHeroSuccessResponse;
+
+      console.log('Withdrawal API Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        data
+      });
+
+      if (!response.ok) {
+        const error = data as WithdrawalError;
+        console.error('Withdrawal Error Response:', error);
+
+        const errorMessage = [
+          error.error_message || error.message || 'Unknown error',
+          error.error_code ? `Error code: ${error.error_code}` : null,
+          error.status_code ? `Status code: ${error.status_code}` : null
+        ].filter(Boolean).join('. ');
+
+        throw new Error(errorMessage);
+      }
+
+      // Handle nested response format
+      if (data.response && this.isSuccessStatus(data.response.Status)) {
+        return paymentResponseSchema.parse({
+          status: "SUCCESS",
+          merchant_reference: data.response.MerchantRequestID,
+          checkout_request_id: data.response.CheckoutRequestID,
+          response_code: data.response.ResultCode.toString(),
+          conversation_id: data.response.TransactionID,
+          reference: externalReference
+        });
+      }
+
+      // Handle direct response format
+      return paymentResponseSchema.parse({
+        status: data.status || "QUEUED",
+        merchant_reference: data.merchant_reference,
+        checkout_request_id: data.checkout_request_id,
+        response_code: data.response_code,
+        conversation_id: data.conversation_id,
+        reference: externalReference
+      });
+
+    } catch (error: any) {
+      console.error('Withdrawal Error:', {
+        message: error.message,
+        cause: error.cause,
+        stack: error.stack
+      });
+      throw new Error(error.message || 'Withdrawal initiation failed');
+    }
   }
 
   async initiateSTKPush(amount: number, phone: string, userId: number): Promise<PaymentResponse> {
@@ -101,86 +210,6 @@ export class PayHeroService {
     }
   }
 
-  async initiateWithdrawal(amount: number, phone: string, userId: number): Promise<PaymentResponse> {
-    const formattedPhone = this.formatPhoneNumber(phone);
-    if (!formattedPhone.match(/^254\d{9}$/)) {
-      throw new Error('Invalid phone number');
-    }
-
-    const externalReference = `withdraw_${Date.now()}_${userId}`;
-
-    const payload = {
-      external_reference: externalReference,
-      amount: Math.floor(amount),
-      phone_number: formattedPhone,
-      network_code: '63902',
-      callback_url: process.env.PAYHERO_CALLBACK_URL,
-      channel: 'mobile',
-      channel_id: 1564,
-      payment_service: 'b2c'
-    };
-
-    try {
-      console.log('Withdrawal Request:', {
-        url: `${this.baseUrl}withdraw`,
-        headers: {
-          'Authorization': `Basic ${this.credentials}`,
-          'Content-Type': 'application/json'
-        },
-        payload
-      });
-
-      const response = await fetch(`${this.baseUrl}withdraw`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${this.credentials}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await response.json();
-
-      console.log('Withdrawal API Response:', {
-        status: response.status,
-        statusText: response.statusText,
-        data
-      });
-
-      if (!response.ok) {
-        const error = data as WithdrawalError;
-        console.error('Withdrawal Error Response:', error);
-
-        // Construct detailed error message
-        const errorMessage = [
-          error.error_message || error.message || 'Unknown error',
-          error.error_code ? `Error code: ${error.error_code}` : null,
-          error.status_code ? `Status code: ${error.status_code}` : null
-        ].filter(Boolean).join('. ');
-
-        throw new Error(errorMessage);
-      }
-
-      // Handle the direct response format
-      return paymentResponseSchema.parse({
-        status: data.status,
-        merchant_reference: data.merchant_reference,
-        checkout_request_id: data.checkout_request_id,
-        response_code: data.response_code,
-        conversation_id: data.conversation_id,
-        reference: externalReference
-      });
-
-    } catch (error: any) {
-      console.error('Withdrawal Error:', {
-        message: error.message,
-        cause: error.cause,
-        stack: error.stack
-      });
-      throw new Error(error.message || 'Withdrawal initiation failed');
-    }
-  }
-
   async checkTransactionStatus(reference: string): Promise<TransactionStatus> {
     try {
       const response = await fetch(
@@ -199,6 +228,24 @@ export class PayHeroService {
       }
 
       const data = await response.json();
+
+      // Log the status response for debugging
+      console.log('Transaction Status Response:', data);
+
+      // Handle PayHero success response format
+      if (data.response && this.isSuccessStatus(data.response.Status)) {
+        return transactionStatusSchema.parse({
+          status: "SUCCESS",
+          success: true,
+          provider: "mpesa",
+          reference: reference,
+          payment_reference: data.response.TransactionID,
+          third_party_reference: data.response.MerchantRequestID,
+          CheckoutRequestID: data.response.CheckoutRequestID,
+          provider_reference: data.response.TransactionID
+        });
+      }
+
       return transactionStatusSchema.parse(data);
     } catch (error: any) {
       console.error('Status Check Error:', error);
