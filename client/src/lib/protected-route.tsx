@@ -1,3 +1,6 @@
+// File: client/src/lib/protected-route.tsx
+// Protected route component for authentication
+
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { Redirect, Route } from "wouter";

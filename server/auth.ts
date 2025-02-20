@@ -1,3 +1,6 @@
+// File: server/auth.ts
+// Authentication setup with Passport.js
+
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { Express } from "express";

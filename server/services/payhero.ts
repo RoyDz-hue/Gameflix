@@ -1,3 +1,6 @@
+// File: server/services/payhero.ts
+// PayHero API integration service
+
 import { z } from "zod";
 
 const paymentResponseSchema = z.object({

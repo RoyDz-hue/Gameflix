@@ -1,3 +1,6 @@
+// File: server/storage.ts
+// Database storage interface implementation
+
 import { InsertUser, User, Transaction, Game } from "@shared/schema";
 import { users, transactions, games } from "@shared/schema";
 import { db } from "./db";

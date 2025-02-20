@@ -5,7 +5,6 @@
 │   │   │   │   ├── button.tsx
 │   │   │   │   ├── card.tsx
 │   │   │   │   ├── form.tsx
-│   │   │   │   └── [other UI components]
 │   │   │   ├── dashboard/
 │   │   │   └── game/
 │   │   ├── hooks/
@@ -31,26 +30,45 @@
 │   └── index.ts
 ├── shared/
 │   └── schema.ts
-├── migrations/
 ├── package.json
 ├── tsconfig.json
 └── vite.config.ts
+
+## Required Environment Variables
+
+Create a `.env` file with the following variables:
+
+```env
+# Database Configuration
+DATABASE_URL=postgresql://user:password@host:5432/dbname
+PGHOST=your_pg_host
+PGPORT=5432
+PGUSER=your_pg_user
+PGPASSWORD=your_pg_password
+PGDATABASE=your_pg_database
+
+# Session Security
+SESSION_SECRET=your_secure_session_secret_min_32_chars
+
+# PayHero API Configuration
+PAYHERO_API_USERNAME=your_payhero_username
+PAYHERO_API_PASSWORD=your_payhero_password
+API_BASE_URL=https://backend.payhero.co.ke/api/v2/
 ```
 
-## Quick Start
+## Installation
 
 1. Clone the repository
-2. Copy `.env.example` to `.env` and fill in your environment variables
-3. Install dependencies:
+2. Install dependencies:
 ```bash
 npm install
 ```
 
-4. Set up the database:
+3. Set up the database:
 ```bash
 npm run db:push
 ```
 
-5. Start the development server:
+4. Start the development server:
 ```bash
 npm run dev

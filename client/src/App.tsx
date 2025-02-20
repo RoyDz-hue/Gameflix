@@ -1,3 +1,6 @@
+// File: client/src/App.tsx
+// Main application component with routing setup
+
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";

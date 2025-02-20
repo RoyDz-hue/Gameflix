@@ -1,3 +1,6 @@
+// File: server/db.ts
+// Database connection setup
+
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import ws from "ws";

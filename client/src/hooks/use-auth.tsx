@@ -1,3 +1,6 @@
+// File: client/src/hooks/use-auth.tsx
+// Authentication hook and context provider
+
 import { createContext, ReactNode, useContext } from "react";
 import {
   useQuery,
