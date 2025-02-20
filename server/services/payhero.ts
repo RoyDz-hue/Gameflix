@@ -43,6 +43,10 @@ interface PayHeroSuccessResponse {
     TransactionID: string;
   };
   status?: boolean;
+  merchant_reference?: string;
+  checkout_request_id?: string;
+  response_code?: string;
+  conversation_id?: string;
 }
 
 export type PaymentResponse = z.infer<typeof paymentResponseSchema>;
@@ -51,17 +55,14 @@ export type TransactionStatus = z.infer<typeof transactionStatusSchema>;
 export class PayHeroService {
   private baseUrl: string;
   private credentials: string;
-  private merchantId: string;
 
   constructor() {
     this.baseUrl = process.env.API_BASE_URL || 'https://backend.payhero.co.ke/api/v2/';
-    this.merchantId = process.env.PAYHERO_MERCHANT_ID || '';
-
-    const apiUsername = process.env.API_USERNAME;
-    const apiPassword = process.env.API_PASSWORD;
+    const apiUsername = process.env.PAYHERO_API_USERNAME;
+    const apiPassword = process.env.PAYHERO_API_PASSWORD;
 
     if (!apiUsername || !apiPassword) {
-      throw new Error('API_USERNAME and API_PASSWORD must be set');
+      throw new Error('PAYHERO_API_USERNAME and PAYHERO_API_PASSWORD must be set');
     }
 
     this.credentials = Buffer.from(`${apiUsername}:${apiPassword}`).toString('base64');
@@ -85,25 +86,22 @@ export class PayHeroService {
     }
 
     const externalReference = `withdraw_${Date.now()}_${userId}`;
+    const callbackUrl = typeof window !== 'undefined' ? window.location.origin + '/api/callback' : process.env.PAYHERO_CALLBACK_URL;
 
     const payload = {
       external_reference: externalReference,
       amount: Math.floor(amount),
       phone_number: formattedPhone,
       network_code: '63902',
-      callback_url: process.env.PAYHERO_CALLBACK_URL,
+      callback_url: callbackUrl,
       channel: 'mobile',
-      channel_id: 1564,
+      channel_id: 1564, // Mobile withdrawal channel ID
       payment_service: 'b2c'
     };
 
     try {
       console.log('Withdrawal Request:', {
         url: `${this.baseUrl}withdraw`,
-        headers: {
-          'Authorization': `Basic ${this.credentials}`,
-          'Content-Type': 'application/json'
-        },
         payload
       });
 
@@ -137,7 +135,6 @@ export class PayHeroService {
         throw new Error(errorMessage);
       }
 
-      // Handle nested response format
       if (data.response && this.isSuccessStatus(data.response.Status)) {
         return paymentResponseSchema.parse({
           status: "SUCCESS",
@@ -149,9 +146,8 @@ export class PayHeroService {
         });
       }
 
-      // Handle direct response format
       return paymentResponseSchema.parse({
-        status: data.status || "QUEUED",
+        status: data.status ? "SUCCESS" : "QUEUED",
         merchant_reference: data.merchant_reference,
         checkout_request_id: data.checkout_request_id,
         response_code: data.response_code,
@@ -175,16 +171,18 @@ export class PayHeroService {
       throw new Error('Invalid phone number');
     }
 
+    const callbackUrl = typeof window !== 'undefined' ? window.location.origin + '/api/callback' : process.env.PAYHERO_CALLBACK_URL;
+
     const payload = {
       amount: Math.floor(amount),
       phone_number: formattedPhone,
-      channel_id: this.merchantId,
+      channel_id: 1487, // STK push channel ID
       external_reference: `deposit_${Date.now()}_${userId}`,
       provider: 'm-pesa',
       channel: 'mobile',
       payment_service: 'c2b',
       network_code: '63902',
-      callback_url: process.env.PAYHERO_CALLBACK_URL
+      callback_url: callbackUrl
     };
 
     try {
@@ -228,11 +226,8 @@ export class PayHeroService {
       }
 
       const data = await response.json();
-
-      // Log the status response for debugging
       console.log('Transaction Status Response:', data);
 
-      // Handle PayHero success response format
       if (data.response && this.isSuccessStatus(data.response.Status)) {
         return transactionStatusSchema.parse({
           status: "SUCCESS",
