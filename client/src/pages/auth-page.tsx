@@ -9,17 +9,35 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { insertUserSchema } from "@shared/schema";
 import { useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
+import { z } from "zod";
+
+const loginSchema = insertUserSchema.pick({
+  username: true,
+  password: true,
+});
+
+type LoginData = z.infer<typeof loginSchema>;
 
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
   const [, setLocation] = useLocation();
 
-  const loginForm = useForm({
-    resolver: zodResolver(insertUserSchema),
+  const loginForm = useForm<LoginData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      username: "",
+      password: "",
+    },
   });
 
   const registerForm = useForm({
     resolver: zodResolver(insertUserSchema),
+    defaultValues: {
+      username: "",
+      email: "",
+      password: "",
+      phoneNumber: "",
+    },
   });
 
   if (user) {
@@ -62,6 +80,11 @@ export default function AuthPage() {
                         id="username"
                         {...loginForm.register("username")}
                       />
+                      {loginForm.formState.errors.username && (
+                        <p className="text-sm text-destructive">
+                          {loginForm.formState.errors.username.message}
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="password">Password</Label>
@@ -70,6 +93,11 @@ export default function AuthPage() {
                         type="password"
                         {...loginForm.register("password")}
                       />
+                      {loginForm.formState.errors.password && (
+                        <p className="text-sm text-destructive">
+                          {loginForm.formState.errors.password.message}
+                        </p>
+                      )}
                     </div>
                     <Button
                       type="submit"
@@ -104,6 +132,36 @@ export default function AuthPage() {
                         id="reg-username"
                         {...registerForm.register("username")}
                       />
+                      {registerForm.formState.errors.username && (
+                        <p className="text-sm text-destructive">
+                          {registerForm.formState.errors.username.message}
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="reg-email">Email</Label>
+                      <Input
+                        id="reg-email"
+                        type="email"
+                        {...registerForm.register("email")}
+                      />
+                      {registerForm.formState.errors.email && (
+                        <p className="text-sm text-destructive">
+                          {registerForm.formState.errors.email.message}
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="reg-phone">Phone Number</Label>
+                      <Input
+                        id="reg-phone"
+                        {...registerForm.register("phoneNumber")}
+                      />
+                      {registerForm.formState.errors.phoneNumber && (
+                        <p className="text-sm text-destructive">
+                          {registerForm.formState.errors.phoneNumber.message}
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="reg-password">Password</Label>
@@ -112,6 +170,11 @@ export default function AuthPage() {
                         type="password"
                         {...registerForm.register("password")}
                       />
+                      {registerForm.formState.errors.password && (
+                        <p className="text-sm text-destructive">
+                          {registerForm.formState.errors.password.message}
+                        </p>
+                      )}
                     </div>
                     <Button
                       type="submit"
