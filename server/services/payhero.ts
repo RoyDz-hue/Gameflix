@@ -30,14 +30,9 @@ export class PayHeroService {
   private credentials: string;
 
   constructor() {
-    const username = process.env.PAYHERO_USERNAME;
-    const password = process.env.PAYHERO_PASSWORD;
-
-    if (!username || !password) {
-      throw new Error('PayHero credentials not configured');
-    }
-
-    this.credentials = Buffer.from(`${username}:${password}`).toString('base64');
+    const apiUsername = 'hYakRT5HZaNPofgw3LSP';
+    const apiPassword = 'ECsKFTrPKQHdfCa63HPDgMdYS7rXSxaX0GlwBMeW';
+    this.credentials = Buffer.from(`${apiUsername}:${apiPassword}`).toString('base64');
   }
 
   private formatPhoneNumber(phone: string): string {
@@ -54,14 +49,14 @@ export class PayHeroService {
     }
 
     const payload = {
-      amount: Math.floor(amount), // Convert to integer
+      amount: Math.floor(amount),
       phone_number: formattedPhone,
       channel_id: '1487',
       external_reference: `spin_${Date.now()}_${userId}`,
       provider: 'm-pesa',
       channel: 'mobile',
       payment_service: 'c2b',
-      network_code: '63902', // Safaricom network code
+      network_code: '63902',
       callback_url: process.env.PAYHERO_CALLBACK_URL
     };
 

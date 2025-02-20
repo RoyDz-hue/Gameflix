@@ -29,6 +29,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "pending",
         transactionId: payment.reference,
         phoneNumber: phone,
+        checkoutRequestId: payment.checkout_request_id || null,
+        providerReference: null,
         createdAt: new Date()
       });
 
@@ -38,7 +40,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         checkoutRequestId: payment.checkout_request_id,
         status: payment.status
       });
-    } catch (error) {
+    } catch (error: any) {
       res.status(400).json({ message: error.message });
     }
   });
@@ -52,27 +54,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      // Initiate withdrawal via PayHero
       const payment = await payHero.initiateWithdrawal(
         Number(req.body.amount),
         req.body.phone,
         req.user.id
       );
 
-      // Create pending transaction
       const transaction = await storage.createTransaction({
         userId: req.user.id,
         type: "withdrawal",
-        amount: (-req.body.amount).toString(), // Negative amount for withdrawals
+        amount: (-req.body.amount).toString(),
         status: "pending",
         transactionId: payment.reference,
         phoneNumber: req.body.phone,
-        checkoutRequestId: payment.checkout_request_id,
+        checkoutRequestId: payment.checkout_request_id || null,
         providerReference: null,
         createdAt: new Date()
       });
 
-      // Only deduct balance after successful withdrawal (handled in callback)
       res.json({
         ...transaction,
         paymentRef: payment.reference,
