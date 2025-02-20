@@ -1,62 +1,124 @@
-# Project Files Overview
+import { pgTable, text, serial, integer, decimal, timestamp, boolean } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull().unique(),
+  email: text("email").notNull().unique(),
+  phoneNumber: text("phone_number").notNull(),
+  password: text("password").notNull(),
+  balance: decimal("balance", { precision: 12, scale: 2 }).notNull().default("0"),
+  referralCode: text("referral_code").notNull(),
+  referredBy: text("referred_by"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const transactions = pgTable("transactions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  type: text("type", { enum: ["deposit", "withdrawal", "game", "referral"] }).notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  status: text("status", { enum: ["pending", "completed", "failed"] }).notNull(),
+  transactionId: text("transaction_id"),  // PayHero reference
+  phoneNumber: text("phone_number"),      // For mobile money transactions
+  checkoutRequestId: text("checkout_request_id"), // PayHero checkout request ID
+  providerReference: text("provider_reference"), // PayHero provider reference
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const games = pgTable("games", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),  
+  gameType: text("game_type", { enum: ["wheel", "box"] }).notNull().default("wheel"),
+  score: integer("score").notNull(),
+  bet: decimal("bet", { precision: 12, scale: 2 }).notNull(),
+  multiplier: decimal("multiplier", { precision: 5, scale: 2 }).notNull(),
+  result: decimal("result", { precision: 12, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertUserSchema = createInsertSchema(users).pick({
+  username: true,
+  email: true,
+  phoneNumber: true,
+  password: true,
+});
+
+export const insertTransactionSchema = createInsertSchema(transactions);
+export const insertGameSchema = createInsertSchema(games);
+
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
+export type Transaction = typeof transactions.$inferSelect;
+export type Game = typeof games.$inferSelect;
+```
+
+### 2. server/db.ts
+```typescript
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-serverless';
+import ws from "ws";
+import * as schema from "@shared/schema";
+
+neonConfig.webSocketConstructor = ws;
+
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL must be set");
+}
+
+export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+export const db = drizzle(pool, { schema });
+```
+
+## Server Files
+
+### 3. server/storage.ts
+The complete storage implementation with PostgreSQL database integration.
+
+### 4. server/auth.ts
+Complete authentication implementation with Passport.js.
+
+### 5. server/routes.ts
+API routes implementation including PayHero integration.
+
+### 6. server/services/payhero.ts
+PayHero service implementation with your specified channel IDs:
+- STK Push Channel ID: 1487
+- Mobile Withdrawal Channel ID: 1564
+
+## Client Files
+
+### 7. client/src/pages/
+- auth-page.tsx (Login/Registration)
+- dashboard.tsx (User Dashboard)
+- game.tsx (Gaming Interface)
+
+### 8. client/src/components/
+- UI components (button.tsx, card.tsx, form.tsx)
+- Dashboard components
+- Game components
+
+### 9. client/src/hooks/
+- use-auth.tsx (Authentication Hook)
+- use-toast.tsx (Notifications)
 
 ## Configuration Files
-- `.replit` - Replit configuration
-- `package.json` - Node.js dependencies and scripts
-- `tsconfig.json` - TypeScript configuration
-- `vite.config.ts` - Vite bundler configuration
-- `tailwind.config.ts` - Tailwind CSS configuration
-- `drizzle.config.ts` - Database ORM configuration
 
-## Client-Side Files
+### 10. Environment Variables (.env)
+```env
+# Database Configuration
+DATABASE_URL=postgresql://user:password@host:5432/dbname
+PGHOST=your_pg_host
+PGPORT=5432
+PGUSER=your_pg_user
+PGPASSWORD=your_pg_password
+PGDATABASE=your_pg_database
 
-### Core
-- `client/index.html` - Entry HTML file
-- `client/src/main.tsx` - React application entry point
-- `client/src/App.tsx` - Main application component
+# Session Security
+SESSION_SECRET=your_secure_session_secret_min_32_chars
 
-### Pages
-- `client/src/pages/auth-page.tsx` - Authentication page (login/register)
-- `client/src/pages/dashboard.tsx` - User dashboard
-- `client/src/pages/game.tsx` - Gaming interface
-- `client/src/pages/not-found.tsx` - 404 page
-
-### Components
-- `client/src/components/ui/*` - UI components (button, card, form, etc.)
-- `client/src/components/dashboard/*` - Dashboard-specific components
-- `client/src/components/game/*` - Game-specific components
-
-### Hooks and Utilities
-- `client/src/hooks/use-auth.tsx` - Authentication hook
-- `client/src/hooks/use-toast.tsx` - Toast notifications
-- `client/src/lib/protected-route.tsx` - Route protection
-- `client/src/lib/queryClient.ts` - API client configuration
-
-## Server-Side Files
-
-### Core
-- `server/index.ts` - Express server entry point
-- `server/routes.ts` - API routes
-- `server/auth.ts` - Authentication setup
-- `server/db.ts` - Database connection
-- `server/storage.ts` - Data storage interface
-
-### Services
-- `server/services/payhero.ts` - PayHero integration service
-
-## Shared Files
-- `shared/schema.ts` - Database schema and types
-
-## Additional Resources
-- `README.md` - Project documentation
-- `migrations/*` - Database migrations
-
-## Getting Started
-1. Download all files maintaining the directory structure
-2. Install dependencies using `npm install`
-3. Set up environment variables as specified in `.env.example`
-4. Run database migrations: `npm run db:push`
-5. Start development server: `npm run dev`
-
-## Note
-Make sure to download all files and maintain the exact directory structure for the project to work correctly.
+# PayHero API Configuration
+PAYHERO_API_USERNAME=your_payhero_username
+PAYHERO_API_PASSWORD=your_payhero_password
+API_BASE_URL=https://backend.payhero.co.ke/api/v2/
