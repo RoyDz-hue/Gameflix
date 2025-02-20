@@ -22,6 +22,13 @@ const transactionStatusSchema = z.object({
   provider_reference: z.string()
 });
 
+interface WithdrawalError {
+  error_code?: string;
+  error_message?: string;
+  status_code?: number;
+  message?: string;
+}
+
 export type PaymentResponse = z.infer<typeof paymentResponseSchema>;
 export type TransactionStatus = z.infer<typeof transactionStatusSchema>;
 
@@ -132,23 +139,50 @@ export class PayHeroService {
         body: JSON.stringify(payload)
       });
 
+      const data = await response.json();
+
+      console.log('Withdrawal API Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        data
+      });
+
       if (!response.ok) {
-        const error = await response.json();
+        const error = data as WithdrawalError;
         console.error('Withdrawal Error Response:', error);
-        throw new Error(error.message || 'Withdrawal initiation failed');
+
+        // Construct detailed error message
+        const errorMessage = [
+          error.error_message || error.message || 'Unknown error',
+          error.error_code ? `Error code: ${error.error_code}` : null,
+          error.status_code ? `Status code: ${error.status_code}` : null
+        ].filter(Boolean).join('. ');
+
+        throw new Error(errorMessage);
       }
 
-      const data = await response.json();
-      return paymentResponseSchema.parse({
-        status: data.response?.Status === "Success" ? "SUCCESS" : "QUEUED",
-        merchant_reference: data.response?.MerchantRequestID,
-        checkout_request_id: data.response?.CheckoutRequestID,
-        response_code: data.response?.ResultCode?.toString(),
-        conversation_id: data.response?.TransactionID,
-        reference: externalReference
-      });
+      // Parse successful response
+      if (data.response) {
+        return paymentResponseSchema.parse({
+          status: data.response.Status === "Success" ? "SUCCESS" : "QUEUED",
+          merchant_reference: data.response.MerchantRequestID,
+          checkout_request_id: data.response.CheckoutRequestID,
+          response_code: data.response.ResultCode?.toString(),
+          conversation_id: data.response.TransactionID,
+          reference: externalReference
+        });
+      }
+
+      // If response doesn't match expected format
+      console.error('Unexpected API response format:', data);
+      throw new Error('Unexpected API response format');
+
     } catch (error: any) {
-      console.error('Withdrawal Error:', error);
+      console.error('Withdrawal Error:', {
+        message: error.message,
+        cause: error.cause,
+        stack: error.stack
+      });
       throw new Error(error.message || 'Withdrawal initiation failed');
     }
   }
