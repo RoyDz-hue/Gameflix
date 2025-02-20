@@ -26,13 +26,15 @@ export type PaymentResponse = z.infer<typeof paymentResponseSchema>;
 export type TransactionStatus = z.infer<typeof transactionStatusSchema>;
 
 export class PayHeroService {
-  private baseUrl = 'https://backend.payhero.co.ke/api/v2/';
+  private baseUrl: string;
   private credentials: string;
+  private merchantId: string;
 
   constructor() {
-    const apiUsername = 'hYakRT5HZaNPofgw3LSP';
-    const apiPassword = 'ECsKFTrPKQHdfCa63HPDgMdYS7rXSxaX0GlwBMeW';
-    this.credentials = Buffer.from(`${apiUsername}:${apiPassword}`).toString('base64');
+    this.baseUrl = process.env.API_BASE_URL || 'https://backend.payhero.co.ke/api/v2/';
+    this.merchantId = process.env.PAYHERO_MERCHANT_ID || '';
+    const apiKey = process.env.PAYHERO_API_KEY || '';
+    this.credentials = Buffer.from(`${apiKey}:${this.merchantId}`).toString('base64');
   }
 
   private formatPhoneNumber(phone: string): string {
@@ -51,8 +53,8 @@ export class PayHeroService {
     const payload = {
       amount: Math.floor(amount),
       phone_number: formattedPhone,
-      channel_id: '1487',
-      external_reference: `spin_${Date.now()}_${userId}`,
+      channel_id: this.merchantId,
+      external_reference: `deposit_${Date.now()}_${userId}`,
       provider: 'm-pesa',
       channel: 'mobile',
       payment_service: 'c2b',
@@ -60,22 +62,27 @@ export class PayHeroService {
       callback_url: process.env.PAYHERO_CALLBACK_URL
     };
 
-    const response = await fetch(`${this.baseUrl}payments`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${this.credentials}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}payments`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${this.credentials}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
 
-    if (!response.ok) {
-      const error = await response.json();
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Payment initiation failed');
+      }
+
+      const data = await response.json();
+      return paymentResponseSchema.parse(data);
+    } catch (error: any) {
+      console.error('STK Push Error:', error);
       throw new Error(error.message || 'Payment initiation failed');
     }
-
-    const data = await response.json();
-    return paymentResponseSchema.parse(data);
   }
 
   async initiateWithdrawal(amount: number, phone: string, userId: number): Promise<PaymentResponse> {
@@ -87,53 +94,66 @@ export class PayHeroService {
     const payload = {
       amount: Math.floor(amount),
       phone_number: formattedPhone,
-      channel_id: '1487',
+      channel_id: this.merchantId,
       external_reference: `withdraw_${Date.now()}_${userId}`,
       provider: 'm-pesa',
       channel: 'mobile',
       payment_service: 'b2c',
       network_code: '63902',
-      callback_url: process.env.PAYHERO_CALLBACK_URL
+      callback_url: process.env.PAYHERO_CALLBACK_URL,
+      recipient_type: 'MSISDN',
+      recipient: formattedPhone,
+      reason: 'withdrawal'
     };
 
-    const response = await fetch(`${this.baseUrl}withdraw`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${this.credentials}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}b2c/withdraw`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${this.credentials}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
 
-    if (!response.ok) {
-      const error = await response.json();
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('Withdrawal Error Response:', error);
+        throw new Error(error.message || 'Withdrawal initiation failed');
+      }
+
+      const data = await response.json();
+      return paymentResponseSchema.parse(data);
+    } catch (error: any) {
+      console.error('Withdrawal Error:', error);
       throw new Error(error.message || 'Withdrawal initiation failed');
     }
-
-    const data = await response.json();
-    return paymentResponseSchema.parse(data);
   }
 
   async checkTransactionStatus(reference: string): Promise<TransactionStatus> {
-    const response = await fetch(
-      `${this.baseUrl}transaction-status?reference=${reference}`,
-      {
-        headers: {
-          'Authorization': `Basic ${this.credentials}`,
-          'Cache-Control': 'no-cache'
+    try {
+      const response = await fetch(
+        `${this.baseUrl}transaction-status?reference=${reference}`,
+        {
+          headers: {
+            'Authorization': `Basic ${this.credentials}`,
+            'Cache-Control': 'no-cache'
+          }
         }
-      }
-    );
+      );
 
-    if (!response.ok) {
-      const error = await response.json();
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Transaction status check failed');
+      }
+
+      const data = await response.json();
+      return transactionStatusSchema.parse(data);
+    } catch (error: any) {
+      console.error('Status Check Error:', error);
       throw new Error(error.message || 'Transaction status check failed');
     }
-
-    const data = await response.json();
-    return transactionStatusSchema.parse(data);
   }
 }
 
-// Create a singleton instance
 export const payHero = new PayHeroService();
