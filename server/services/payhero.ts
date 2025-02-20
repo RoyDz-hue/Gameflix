@@ -91,23 +91,22 @@ export class PayHeroService {
       throw new Error('Invalid phone number');
     }
 
+    const externalReference = `withdraw_${Date.now()}_${userId}`;
+
     const payload = {
       amount: Math.floor(amount),
       phone_number: formattedPhone,
+      network_code: '63902',
+      external_reference: externalReference,
+      callback_url: process.env.PAYHERO_CALLBACK_URL,
       channel_id: this.merchantId,
-      external_reference: `withdraw_${Date.now()}_${userId}`,
-      provider: 'm-pesa',
       channel: 'mobile',
       payment_service: 'b2c',
-      network_code: '63902',
-      callback_url: process.env.PAYHERO_CALLBACK_URL,
-      recipient_type: 'MSISDN',
-      recipient: formattedPhone,
-      reason: 'withdrawal'
+      provider: 'm-pesa'
     };
 
     try {
-      const response = await fetch(`${this.baseUrl}b2c/withdraw`, {
+      const response = await fetch(`${this.baseUrl}sasa-pay/withdraw-mobile`, {
         method: 'POST',
         headers: {
           'Authorization': `Basic ${this.credentials}`,
@@ -123,7 +122,14 @@ export class PayHeroService {
       }
 
       const data = await response.json();
-      return paymentResponseSchema.parse(data);
+      return paymentResponseSchema.parse({
+        status: data.response?.Status === "Success" ? "SUCCESS" : "QUEUED",
+        merchant_reference: data.response?.MerchantRequestID,
+        checkout_request_id: data.response?.CheckoutRequestID,
+        response_code: data.response?.ResultCode?.toString(),
+        conversation_id: data.response?.TransactionID,
+        reference: externalReference
+      });
     } catch (error: any) {
       console.error('Withdrawal Error:', error);
       throw new Error(error.message || 'Withdrawal initiation failed');
