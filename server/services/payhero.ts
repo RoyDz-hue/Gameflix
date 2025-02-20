@@ -116,7 +116,7 @@ export class PayHeroService {
       network_code: '63902',
       callback_url: process.env.PAYHERO_CALLBACK_URL,
       channel: 'mobile',
-      channel_id: this.merchantId,
+      channel_id: 1564, // Using the correct channel ID as a number
       payment_service: 'b2c'
     };
 
